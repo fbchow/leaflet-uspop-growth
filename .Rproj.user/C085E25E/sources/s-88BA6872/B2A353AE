@@ -7,14 +7,14 @@
     "folds" : "",
     "hash" : "0",
     "id" : "B2A353AE",
-    "lastKnownWriteTime" : 1524758550,
-    "last_content_update" : 1524758550264,
+    "lastKnownWriteTime" : 1524764003,
+    "last_content_update" : 1524764004113,
     "path" : "~/ncf/dataviz/tutorial_geojsonio/leaflet_tutorial_lab.Rmd",
     "project_path" : "leaflet_tutorial_lab.Rmd",
     "properties" : {
-        "cursorPosition" : "239,0",
+        "cursorPosition" : "2,19",
         "last_setup_crc32" : "88BA6872b1f9afc3",
-        "scrollLine" : "249"
+        "scrollLine" : "0"
     },
     "relative_order" : 2,
     "source_on_save" : false,

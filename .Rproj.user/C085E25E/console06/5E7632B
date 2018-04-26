@@ -166,4 +166,3 @@ fatal: pathspec 'origin' did not match any files
 fatal: pathspec 'remote' did not match any files
 ]0;~/ncf/dataviz/tutorial_geojsonioFannys-MacBook-Air:tutorial_geojsonio fanny$ git rm remote origin[1P[1P[1P[C[C[C[C[C[C[Croriginmorigin origin
 ]0;~/ncf/dataviz/tutorial_geojsonioFannys-MacBook-Air:tutorial_geojsonio fanny$ git remote rm originm remote[C[C[C[C[C[C[C[7Poriginremote originemote rm[C[C[C[C[C[C[C[Kgit remote rm originm remote[C[C[C[C[C[C[C[7Poriginemote add origin https://giithub.com/fbchow/leaflet-uspop-growth.git
-]0;~/ncf/dataviz/tutorial_geojsonioFannys-MacBook-Air:tutorial_geojsonio fanny$ 
