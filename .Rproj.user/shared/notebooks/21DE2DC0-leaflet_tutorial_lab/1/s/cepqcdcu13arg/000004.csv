@@ -1,0 +1,2 @@
+"0","# use geojsonio to load the spatial data into sp objects"
+"0","states <- geojsonio::geojson_read(""gz_2010_us_040_00_500k.json"", what= ""sp"")"

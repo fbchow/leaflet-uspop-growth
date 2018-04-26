@@ -1,0 +1,3 @@
+"0","bins <- seq(0.85,1.15, 0.05)"
+"0","# pal <- colorBin(""YlOrRd"", domain = ""column to color by"", bins = bins)"
+"0","pal <- colorBin(""Blues"", domain = ""column to color by"", bins = bins)"

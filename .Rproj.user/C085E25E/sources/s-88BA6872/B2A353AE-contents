@@ -1,0 +1,272 @@
+---
+title: "Introduction to Leaflet with R"
+author: "Kevin Hunt"
+date: "April 23, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#library(install.load)
+library(dplyr)
+
+# GeoJsonIO has many system dependencies which have to be handled outside of R. Here are the bash commands I had to run on my system to get it to work (Ubuntu 16.04)
+# ----Ubuntu-----
+# sudo apt install protobuf-compiler
+# sudo add-apt-repository -y ppa:opencpu/jq
+# sudo apt-get update
+# sudo apt-get install libjq-dev
+# sudo apt-get install libudunits2-dev
+# sudo apt-get install libv8-3.14-dev
+# sudo add-apt-repository -y ppa:ubuntugis/ppa
+# sudo apt update 
+# sudo apt upgrade # if you already have gdal installed
+# sudo apt install gdal-bin # if you don't have gdal installed
+
+# library(sf)
+library(geojsonio)
+library(downloader)
+library(leaflet)
+library(maptools)
+```
+
+This tutorial is based partially on the tutorial: http://rstudio.github.io/leaflet/choropleths.html
+
+## Load our interesting Data
+
+We will be working with a dataset from the United States Census Bureau of National Population Totals and Components of Change: 2010-2017. This dataset contains the estimated population of each state every year from 2010 through 2017. We will be visualizing the percent change in population for each state in 2016 vs 2010. 
+
+__Download the data, load into R, munge__
+
+```{r}
+# load in the csv
+pop.estimates <- read.csv("nst-est2017-popchg2010_2017.csv", stringsAsFactors = FALSE)
+
+# create a column of the population growth in 2017 versus 2010
+pop.estimates$difference <- pop.estimates$POPESTIMATE2017 - pop.estimates$POPESTIMATE2010
+
+pop.estimates$percentagegrowth <- pop.estimates$POPESTIMATE2017 / pop.estimates$POPESTIMATE2010
+
+# drop the information for overall United States and Regions (we only want states)
+pop.estimates <- pop.estimates %>% 
+  filter(STATE != 0)
+  
+
+```
+
+## Grab a GeoJSON file
+
+With our data loaded, we are ready to begin with the visualization.
+We’ll start by finding and loading the GeoJSON information from a JSON file. 
+```{r}
+# download the .json and save it
+# u <- "enter url here"
+# downloader::download(url = u, destfile="us-states.geojson")
+```
+
+We’ll use the geojsonio package to load the data into sp objects. The __sp__ package provides classes and methods for dealing with spatial data in __R__ which will let us easily manipulate the geographic features, and their properties.
+
+```{r}
+# use geojsonio to load the spatial data into sp objects
+states <- geojsonio::geojson_read("gz_2010_us_040_00_500k.json", what= "sp")
+```
+
+Take a look at the data structure of this object.
+
+## Combining our data with the SpatialPolygonsDataFrame 
+
+Let's take a look at the order of the states in the two data frames. What do you notice?
+```{r}
+# SpatialPolygonsDataFrame(states@data)
+```
+
+**WARNING:** There is much misleading information online about how to merge a dataset with your SpatialPolygonsDataFrame. Be careful! The states@data data frame needs to be in the same order as the JSON data. R will happily merge dataframes in a new order, leading to plotting of the wrong data for each state! 
+
+Hint: Look at the options in merge.
+
+```{r}
+# Add a new column to the SpatialPolygonsDataFrame@data with our data of interest
+states@data <- base::merge(states@data, pop.estimates %>% 
+                             select(NAME, percentagegrowth)
+                        , by="NAME", sort=FALSE)
+
+# states@data <- merge(states@data, pop.change %>% select(NAME, percentagegrowth), by = "NAME", sort = FALSE)
+
+# head(states.df)
+```
+
+## Our First Leaflet
+
+Let's start out by visualing the polygons described in our SpatialPolygonsDataFrame.
+
+```{r}
+# provide leaflet with the SpatialPolygonsDataFrame
+# set the view to the contiguous United States
+# set what the background map should look like.
+    #addTiles() # basic
+    #addProviderTiles("Stamen.Watercolor") #FUN
+# why is -96 negative? because we're west of the Prime Meridian
+# what zoom would you use to look at a city?
+
+m <- leaflet(states) %>% 
+  setView(-96, 37.8, 4) %>% # set long, lat, zoom-in by factor of 4
+  addProviderTiles("Stamen.Watercolor")
+m
+  
+```
+
+Almost beautiful enough to stop there. But let's add the polygons described in our SpatialPolygonsDataFrame.
+```{r}
+m %>% addPolygons()
+```
+
+It seems like we just ruined a perfectly good watercolor. This needs some data to redeem the map.
+
+## Color by some feature in the SpatialPolygonsDataFrame.
+
+We now want to color by a feature of our data, the percentage of growth from 2010 to 2017 in each state. First, we need to create our color scale for this data. Let's split bin on populations that have decreased and increased
+
+We will now create bins based on this range and use those bins to divide a colorscale up.  
+
+Use a histogram & look at the distribution of  
+```{r}
+hist(states@data$percentagegrowth)
+
+```
+
+
+```{r}
+bins <- seq(0.85,1.15, 0.05)
+# pal <- colorBin("YlOrRd", domain = "column to color by", bins = bins)
+pal <- colorBin("Blues", domain = "column to color by", bins = bins)
+```
+
+Now, using the feature data we will color the polygons and add a nice border.
+```{r}
+withcolor <- m %>% 
+  addPolygons(
+    fillColor = ~pal(states$percentagegrowth),
+    weight = 2,
+    opacity = 0.5,
+    color = "white",
+    dashArray = "3", # make the borders dashes
+    fillOpacity = 0.7
+            )
+withcolor
+```
+
+It's a choropleth. But wait! What do all those colors mean?
+
+# Add a legend
+
+```{r}
+withLegend<- withcolor %>% 
+  addLegend(
+    pal = pal,
+    values = ~states$percentagegrowth,
+    opacity = 0.7,
+    title = "Population Growth Since 2010",
+    position = "bottomright"
+            )
+withLegend
+```
+
+Better as far as responsible reporting goes. We can quickly see which states had a population decrease in 2017 from 2010. However, this seems to be a waste of the visual space. We could have simply listed states that saw a decrease in population and not used up so much of the page. Let's make this map more informative. It would be interesting to see differences in the percent increase, 15% population increase in 7 years is quite different than 0.08% increase.
+
+__Lab Exercise 1: Play with the binning to make the map more informative.__
+
+```{r}
+
+```
+
+__Lab Exercise 2: Aesthetics: Improve the legend, change the color scheme.__
+
+```{r}
+
+```
+
+__Advanced: Find a different provider tile for the background and change the aesthetics to match__
+
+```{r}
+
+```
+
+## Adding Interactivity
+
+Now what this map needs is some interactivity. It's 2018, you can't have a visualization without it.  
+
+First, we're going to create a response to hovering over the polygons.
+```{r}
+labels <- 
+
+hovering <-m %>% 
+  addPolygons(
+    fillColor = ~pal(states$percentagegrowth),
+    weight = 2,
+    opacity = 0.5,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 5,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE
+    )
+    
+
+)
+hovering  # what about the legend?
+```
+
+__Lab Exercise 3: Wow that hover border is gross looking. Please fix it__
+
+```{r}
+
+```
+
+Finally, we are going to create a popup to provide information while hovering.
+
+```{r}
+# labels <- 
+# 
+# final <- m %>% 
+#   addPolygons(
+#   # Add code here
+# )
+# final %>% # what's missing again?
+```
+
+Note* Formating the labelOptions doesn't work for me.
+
+And we've done it! An interactive choropleth!
+
+Now, does it make sense to use the percent increase? Will we see anything different if we use raw numbers? We originally created a column for the difference in population from 2017 to 2010.
+
+__Lab Exercise 4: Swap the data to the raw difference in population__
+
+```{r}
+
+```
+
+__Lab Exercise 5: If you haven't already, change the aesthetics of the map__
+
+```{r}
+
+```
+
+__Advanced: Find a dataset at the county level (optional: of Florida). Find a geoJSON with county level information. Use Leaflet to create an interactive map.__
+
+```{r}
+
+```
+
+__Challenge: Feeling like your map is looking pretty good? Enter your map to be evaluated by your peers at the end of class for a chance to win a prize.__
+
+
+
+
+
+
+

@@ -1,0 +1,6 @@
+"0","# Add a new column to the SpatialPolygonsDataFrame@data with our data of interest"
+"0","states@data <- base::merge(states@data, pop.estimates %>% "
+"0","                             select(NAME, percentagegrowth)"
+"0","                        , by=""NAME"", sort=FALSE)"
+"0","# states@data <- merge(states@data, pop.change %>% select(NAME, percentagegrowth), by = ""NAME"", sort = FALSE)"
+"0","# head(states.df)"

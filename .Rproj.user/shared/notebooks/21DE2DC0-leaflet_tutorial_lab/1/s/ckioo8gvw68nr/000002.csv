@@ -1,0 +1,3 @@
+"0","# download the .json and save it"
+"0","# u <- ""enter url here"""
+"0","# downloader::download(url = u, destfile=""us-states.geojson"")"
